@@ -26,12 +26,23 @@ class _GameScreenState extends State<GameScreen> {
   late AudioPlayer _clickPlayer;
   int sessionWordsGuessed = 0;
   List<String> sessionTimes = [];
+  String playerName = "Player";
+  int numberOfWords = 10;
+  String difficulty = "Easy";
 
   @override
   void initState() {
     super.initState();
     _clickPlayer = AudioPlayer();
-    loadNewWord();
+    loadSettings().then((_) => loadNewWord());
+  }
+
+  Future<void> loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    playerName = prefs.getString('playerName') ?? "Player";
+    numberOfWords = prefs.getInt('numberOfWords') ?? 10;
+    difficulty = prefs.getString('difficulty') ?? "Easy";
+    setState(() {});
   }
 
   Future<void> playClickSound() async {
@@ -77,7 +88,20 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<String> fetchRandomWord(int level) async {
-    final int wordLength = 3 + level;
+    int baseLength;
+    switch (difficulty) {
+      case "Medium":
+        baseLength = 5;
+        break;
+      case "Hard":
+        baseLength = 7;
+        break;
+      default:
+        baseLength = 3;
+    }
+
+    final int wordLength = baseLength + (level ~/ 2);
+
     try {
       final response = await http
           .get(
@@ -185,7 +209,7 @@ class _GameScreenState extends State<GameScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop();
                   setState(() {
                     score = 0;
                     level = 1;
@@ -194,7 +218,7 @@ class _GameScreenState extends State<GameScreen> {
                     sessionWordsGuessed = 0;
                     sessionTimes.clear();
                   });
-                  loadNewWord(); // Restart the game
+                  loadNewWord();
                 },
                 child: const Text('OK'),
               ),
@@ -236,6 +260,15 @@ class _GameScreenState extends State<GameScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Text(
+                      playerName,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       jumbledWord,
                       style: const TextStyle(
